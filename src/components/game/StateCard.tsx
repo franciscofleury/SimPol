@@ -1,13 +1,17 @@
 'use client';
 
-import { GameStateData, PlayerData, ATTRIBUTE_LABELS, ATTRIBUTES, NUM_PARTIES } from '@/game/types';
+import { GameStateData, PlayerData, ATTRIBUTE_LABELS, ATTRIBUTES } from '@/game/types';
+
+type Tab = 'quality' | 'expectation' | 'perception' | 'ideology';
 
 interface StateCardProps {
   state: GameStateData;
   players: PlayerData[];
+  activeTab: Tab;
+  hasBeenPolled: boolean;
 }
 
-export function StateCard({ state, players }: StateCardProps) {
+export function StateCard({ state, players, activeTab, hasBeenPolled }: StateCardProps) {
   const governor = state.offices.find((o) => o.type === 'GOVERNOR');
   const governorParty = governor?.partyIndex !== null && governor?.partyIndex !== undefined
     ? players[governor.partyIndex]
@@ -16,11 +20,6 @@ export function StateCard({ state, players }: StateCardProps) {
   const senators = state.offices
     .filter((o) => o.type === 'SENATOR_1' || o.type === 'SENATOR_2')
     .map((o) => (o.partyIndex !== null && o.partyIndex !== undefined ? players[o.partyIndex] : null));
-
-  // Find top party by deputies in this state
-  const topDeputyParty = Object.entries(state.deputyAllocation)
-    .sort(([, a], [, b]) => b - a)
-    .map(([idx]) => Number(idx))[0];
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
@@ -46,28 +45,100 @@ export function StateCard({ state, players }: StateCardProps) {
         </div>
       </div>
 
-      {/* Attributes */}
+      {/* Attributes — tab-aware */}
       <div className="space-y-1.5">
-        {state.attributes.map((attr, i) => {
-          const maxVal = 8;
-          const pct = Math.min(100, (attr.realQuality / maxVal) * 100);
-          return (
-            <div key={i} className="flex items-center gap-2 text-xs">
-              <span className="w-24 text-gray-600 truncate">
-                {ATTRIBUTE_LABELS[ATTRIBUTES[i]]}
-              </span>
-              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 rounded-full"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <span className="w-8 text-right text-gray-500 font-mono">
-                {attr.realQuality.toFixed(1)}
-              </span>
-            </div>
-          );
-        })}
+        {activeTab === 'quality' && (
+          <>
+            {state.attributes.map((attr, i) => {
+              const pct = Math.min(100, (attr.realQuality / 8) * 100);
+              return (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  <span className="w-24 text-gray-600 truncate">
+                    {ATTRIBUTE_LABELS[ATTRIBUTES[i]]}
+                  </span>
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="w-8 text-right text-gray-500 font-mono">
+                    {attr.realQuality.toFixed(1)}
+                  </span>
+                </div>
+              );
+            })}
+          </>
+        )}
+
+        {(activeTab === 'expectation' || activeTab === 'perception') && (
+          <>
+            {state.attributes.map((attr, i) => {
+              const val = activeTab === 'expectation' ? attr.expectation : attr.perceivedQuality;
+              const pct = Math.min(100, (val / 8) * 100);
+              return (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  <span className="w-24 text-gray-600 truncate">
+                    {ATTRIBUTE_LABELS[ATTRIBUTES[i]]}
+                  </span>
+                  {hasBeenPolled ? (
+                    <>
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded-full"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-right text-gray-500 font-mono">
+                        {val.toFixed(1)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden" />
+                      <span className="w-8 text-right text-gray-400 font-mono">?</span>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </>
+        )}
+
+        {activeTab === 'ideology' && (
+          <table className="w-full text-xs border-collapse mt-1">
+            <thead>
+              <tr>
+                <th className="text-left py-0.5 pr-2 text-gray-500 font-normal w-24">Attribute</th>
+                {players.map((p) => (
+                  <th key={p.partyIndex} className="text-center py-0.5 px-1">
+                    <div
+                      className="w-3 h-3 rounded-full mx-auto"
+                      style={{ backgroundColor: p.color }}
+                      title={p.name}
+                    />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {ATTRIBUTES.map((attr, attrIdx) => (
+                <tr key={attrIdx} className="border-t border-gray-100">
+                  <td className="py-0.5 pr-2 text-gray-600 truncate">
+                    {ATTRIBUTE_LABELS[attr]}
+                  </td>
+                  {players.map((p) => (
+                    <td key={p.partyIndex} className="text-center py-0.5 px-1 text-gray-700 font-mono">
+                      {hasBeenPolled
+                        ? (state.perceivedIdeology[p.partyIndex]?.[attrIdx]?.toFixed(1) ?? '?')
+                        : '?'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Deputy allocation bar */}

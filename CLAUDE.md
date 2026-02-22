@@ -17,7 +17,7 @@ SimPol is a turn-based strategic political simulation game. Players choose a par
 src/
   app/          Next.js App Router — layout, global styles, root page
   components/
-    game/       All UI components (SetupScreen, GameBoard, panels, etc.)
+    game/       All UI components (SetupScreen, GameBoard, panels, AdminPanel dev overlay, etc.)
   game/         All game logic — pure modules, no React dependencies
     types.ts    Canonical source of all types, constants, and presets
     store.tsx   GameContext + GameDispatchContext + reducer
@@ -47,3 +47,4 @@ Check these files when working on the relevant area:
 |---|---|
 | Architecture, patterns, data flow | [`.claude/docs/architectural_patterns.md`](.claude/docs/architectural_patterns.md) |
 | Game rules and design intent | `SimPol_GameRules.pdf` |
+| Dev/debug overlay | See `AdminPanel` in [`.claude/docs/architectural_patterns.md`](.claude/docs/architectural_patterns.md) |

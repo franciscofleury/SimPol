@@ -80,6 +80,7 @@ page.tsx (Home)
 └── GameProvider (store.tsx)
     ├── SetupScreen          — preset picker, game length
     └── GameBoard            — orchestrates all in-game UI
+        ├── AdminPanel       — dev overlay (toggleable, reads full StoreState)
         ├── Sidebar          — player info, all-party summary, scores
         ├── PollPanel        — phase: POLLS
         ├── CampaignPanel    — phase: CAMPAIGNS
@@ -90,6 +91,15 @@ page.tsx (Home)
 ```
 
 `GameBoard` (`src/components/game/GameBoard.tsx`) renders the correct panel by switching on `state.currentPhase`. All panels call `dispatch(END_PHASE)` when the human finishes their actions.
+
+---
+
+## Dev / Debug Tools
+
+`AdminPanel` (`src/components/game/AdminPanel.tsx`) is a full-screen overlay toggled by an
+"Admin" button in the `GameBoard` header. It reads the full `StoreState` via `useGameState()`
+and renders four collapsible sections: Game Info, Players, States, and Rounds History.
+Visibility is controlled by a local `useState` boolean in `GameBoard` — no store changes needed.
 
 ---
 

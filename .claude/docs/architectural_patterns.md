@@ -42,7 +42,7 @@ All game logic lives in `src/game/` as plain TypeScript modules with no React im
 | `economy.ts` | `distributeIncome()` — tier-based post-election funding | `src/game/economy.ts` |
 | `perception.ts` | `applyPerceptionDrift()` — 10% drift toward reality per round | `src/game/perception.ts` |
 | `scoring.ts` | `computeSpearmanScores()` — final ideology-vs-reality ranking | `src/game/scoring.ts` |
-| `polls.ts` | `executePoll(game, playerIndex, stateIndex, attributeIndex)` — spend coins, reveal single-attribute data for all parties | `src/game/polls.ts` |
+| `polls.ts` | `executePoll()` — spend coins, reveal single-attribute data for all parties; `roundToHalf()` — exported helper rounding to nearest 0.5, applied in display components to limit poll result precision | `src/game/polls.ts` |
 | `campaigns.ts` | `executeCampaign()` — spend coins, boost perceived ideology | `src/game/campaigns.ts` |
 | `ai.ts` | `executeAllAITurns()` — random poll/campaign actions | `src/game/ai.ts` |
 

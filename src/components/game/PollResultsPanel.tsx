@@ -2,6 +2,7 @@
 
 import { useGameState, useGameDispatch } from '@/game/store';
 import { ATTRIBUTE_LABELS, ATTRIBUTES } from '@/game/types';
+import { roundToHalf } from '@/game/polls';
 
 export function PollResultsPanel() {
   const { game, lastPollResults } = useGameState();
@@ -23,7 +24,9 @@ export function PollResultsPanel() {
 
       <div className="space-y-4">
         {lastPollResults.map((result, idx) => {
-          const gap = result.expectation - result.perceivedQuality;
+          const exp = roundToHalf(result.expectation);
+          const pq  = roundToHalf(result.perceivedQuality);
+          const gap = exp - pq;
           return (
             <div key={idx} className="bg-gray-50 rounded-lg p-4">
               <h3 className="font-semibold text-gray-900 mb-3">
@@ -35,11 +38,11 @@ export function PollResultsPanel() {
               <div className="flex gap-6 text-sm mb-3">
                 <div>
                   <span className="text-gray-500">Expectation: </span>
-                  <span className="font-mono">{result.expectation.toFixed(1)}</span>
+                  <span className="font-mono">{exp.toFixed(1)}</span>
                 </div>
                 <div>
                   <span className="text-gray-500">Perceived Quality: </span>
-                  <span className="font-mono">{result.perceivedQuality.toFixed(1)}</span>
+                  <span className="font-mono">{pq.toFixed(1)}</span>
                 </div>
                 <div>
                   <span className="text-gray-500">Gap: </span>
@@ -62,7 +65,9 @@ export function PollResultsPanel() {
                         </div>
                       </td>
                       <td className="py-1 font-mono text-right">
-                        {result.perceivedIdeology[p.partyIndex]?.toFixed(1) ?? '?'}
+                        {result.perceivedIdeology[p.partyIndex] !== undefined
+                          ? roundToHalf(result.perceivedIdeology[p.partyIndex]).toFixed(1)
+                          : '?'}
                       </td>
                     </tr>
                   ))}

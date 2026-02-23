@@ -1,6 +1,11 @@
 import { GameState, PollResult, COST_POLL, NUM_ATTRIBUTES } from './types';
 import { canAfford, spendCoins } from './economy';
 
+/** Round a value to the nearest 0.5 multiple. Used to limit poll result precision. */
+export function roundToHalf(n: number): number {
+  return Math.round(n * 2) / 2;
+}
+
 /**
  * Execute a poll action: reveal expectation, perceived quality, and all parties'
  * perceived ideology for a single attribute in a specific state.

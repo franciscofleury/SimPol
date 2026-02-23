@@ -1,6 +1,7 @@
 'use client';
 
 import { GameStateData, PlayerData, ATTRIBUTE_LABELS, ATTRIBUTES } from '@/game/types';
+import { roundToHalf } from '@/game/polls';
 
 type Tab = 'quality' | 'expectation' | 'perception' | 'ideology';
 
@@ -74,7 +75,7 @@ export function StateCard({ state, players, activeTab, polledAttributes }: State
         {(activeTab === 'expectation' || activeTab === 'perception') && (
           <>
             {state.attributes.map((attr, i) => {
-              const val = activeTab === 'expectation' ? attr.expectation : attr.perceivedQuality;
+              const val = roundToHalf(activeTab === 'expectation' ? attr.expectation : attr.perceivedQuality);
               const pct = Math.min(100, (val / 8) * 100);
               return (
                 <div key={i} className="flex items-center gap-2 text-xs">
@@ -130,7 +131,10 @@ export function StateCard({ state, players, activeTab, polledAttributes }: State
                   {players.map((p) => (
                     <td key={p.partyIndex} className="text-center py-0.5 px-1 text-gray-700 font-mono">
                       {polledAttributes.has(attrIdx)
-                        ? (state.perceivedIdeology[p.partyIndex]?.[attrIdx]?.toFixed(1) ?? '?')
+                        ? (() => {
+                            const v = state.perceivedIdeology[p.partyIndex]?.[attrIdx];
+                            return v !== undefined ? roundToHalf(v).toFixed(1) : '?';
+                          })()
                         : '?'}
                     </td>
                   ))}

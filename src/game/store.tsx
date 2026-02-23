@@ -5,7 +5,9 @@ import {
   GameState,
   GameAction,
   PollResult,
+  CampaignResult,
   COST_POLL,
+  COST_CAMPAIGN,
 } from './types';
 import { createGame } from './setup';
 import { executePoll } from './polls';
@@ -22,7 +24,9 @@ type StoreAction =
   | { type: 'SCHEDULE_POLL'; stateIndex: number; attributeIndex: number }
   | { type: 'CANCEL_POLL'; stateIndex: number; attributeIndex: number }
   | { type: 'DISMISS_POLL_RESULTS' }
-  | { type: 'CAMPAIGN'; stateIndex: number; attributeIndex: number }
+  | { type: 'SCHEDULE_CAMPAIGN'; stateIndex: number; attributeIndex: number }
+  | { type: 'CANCEL_CAMPAIGN'; stateIndex: number; attributeIndex: number }
+  | { type: 'DISMISS_CAMPAIGN_RESULTS' }
   | { type: 'END_PHASE' }
   | { type: 'SET_MESSAGE'; message: string };
 
@@ -31,6 +35,8 @@ interface StoreState {
   message: string;
   scheduledPolls: Array<{ stateIndex: number; attributeIndex: number }>;
   lastPollResults: PollResult[];
+  scheduledCampaigns: Array<{ stateIndex: number; attributeIndex: number }>;
+  lastCampaignResults: CampaignResult[];
 }
 
 const HUMAN_PLAYER_INDEX = 0;
@@ -94,23 +100,49 @@ function gameReducer(state: StoreState, action: StoreAction): StoreState {
       return { ...state, lastPollResults: [] };
     }
 
-    case 'CAMPAIGN': {
+    case 'SCHEDULE_CAMPAIGN': {
       if (!state.game) return state;
-      const game = structuredClone(state.game);
-      const success = executeCampaign(
-        game,
-        HUMAN_PLAYER_INDEX,
-        action.stateIndex,
-        action.attributeIndex,
-      );
-      if (!success) {
-        return { ...state, message: 'Cannot execute campaign (insufficient funds or invalid selection).' };
+      const { stateIndex, attributeIndex } = action;
+      const humanPlayer = state.game.players[HUMAN_PLAYER_INDEX];
+
+      // Affordability: total cost of queue + this new campaign
+      const totalCost = COST_CAMPAIGN * (state.scheduledCampaigns.length + 1);
+      if (humanPlayer.coins < totalCost) {
+        return { ...state, message: 'Insufficient funds to schedule this campaign.' };
       }
+
+      // Block duplicate in queue
+      const alreadyQueued = state.scheduledCampaigns.some(
+        (c) => c.stateIndex === stateIndex && c.attributeIndex === attributeIndex,
+      );
+      if (alreadyQueued) return state;
+
+      // Block same-round re-campaign
+      const currentRound = state.game.currentRound;
+      const alreadyCampaigned = humanPlayer.campaignResults.some(
+        (r) => r.stateIndex === stateIndex && r.attributeIndex === attributeIndex && r.round === currentRound,
+      );
+      if (alreadyCampaigned) return state;
+
       return {
         ...state,
-        game,
-        message: `Campaign launched in ${game.states[action.stateIndex].name}.`,
+        scheduledCampaigns: [...state.scheduledCampaigns, { stateIndex, attributeIndex }],
+        message: `Campaign scheduled in ${state.game.states[stateIndex].name}.`,
       };
+    }
+
+    case 'CANCEL_CAMPAIGN': {
+      return {
+        ...state,
+        scheduledCampaigns: state.scheduledCampaigns.filter(
+          (c) => !(c.stateIndex === action.stateIndex && c.attributeIndex === action.attributeIndex),
+        ),
+        message: 'Scheduled campaign cancelled.',
+      };
+    }
+
+    case 'DISMISS_CAMPAIGN_RESULTS': {
+      return { ...state, lastCampaignResults: [] };
     }
 
     case 'END_PHASE': {
@@ -130,10 +162,23 @@ function gameReducer(state: StoreState, action: StoreAction): StoreState {
         scheduledPolls = [];
       }
 
+      let lastCampaignResults = state.lastCampaignResults;
+      let scheduledCampaigns = state.scheduledCampaigns;
+
+      if (game.currentPhase === 'CAMPAIGNS' && scheduledCampaigns.length > 0) {
+        const results: CampaignResult[] = [];
+        for (const c of scheduledCampaigns) {
+          const result = executeCampaign(game, HUMAN_PLAYER_INDEX, c.stateIndex, c.attributeIndex);
+          if (result) results.push(result);
+        }
+        lastCampaignResults = results;
+        scheduledCampaigns = [];
+      }
+
       executeAllAITurns(game);
       const msg = playerReady(game, HUMAN_PLAYER_INDEX);
 
-      return { ...state, game, message: msg, lastPollResults, scheduledPolls };
+      return { ...state, game, message: msg, lastPollResults, scheduledPolls, lastCampaignResults, scheduledCampaigns };
     }
 
     case 'SET_MESSAGE': {
@@ -154,6 +199,8 @@ const initialState: StoreState = {
   message: '',
   scheduledPolls: [],
   lastPollResults: [],
+  scheduledCampaigns: [],
+  lastCampaignResults: [],
 };
 
 const GameContext = createContext<StoreState>(initialState);

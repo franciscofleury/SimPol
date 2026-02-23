@@ -140,6 +140,7 @@ function createPlayers(
       ideology: [...preset.ideology] as PlayerData['ideology'],
       isReady: false,
       pollResults: [],
+      campaignResults: [],
     });
   }
 

@@ -20,9 +20,10 @@ Both hooks throw if used outside `<GameProvider>`. All components use hooks — 
 - `NEW_GAME` — initialize with preset + maxRounds
 - `START_GAME` — run year-0 elections, set status to `IN_PROGRESS`
 - `SCHEDULE_POLL` / `CANCEL_POLL` — queue/dequeue a poll for the human player (no coins spent yet)
-- `DISMISS_POLL_RESULTS` — clear the post-phase results panel
-- `CAMPAIGN` — spend coins, mutate state data (requires `stateIndex` + `attributeIndex`)
-- `END_PHASE` — execute scheduled polls (deducting coins), mark human ready, run AI turns, call `advancePhase()`
+- `DISMISS_POLL_RESULTS` — clear the post-phase poll results panel
+- `SCHEDULE_CAMPAIGN` / `CANCEL_CAMPAIGN` — queue/dequeue a campaign for the human player (no coins spent yet)
+- `DISMISS_CAMPAIGN_RESULTS` — clear the post-phase campaign results panel
+- `END_PHASE` — execute scheduled polls and campaigns (deducting coins), mark human ready, run AI turns, call `advancePhase()`
 - `SET_MESSAGE` — update status bar text
 
 ---
@@ -43,7 +44,7 @@ All game logic lives in `src/game/` as plain TypeScript modules with no React im
 | `perception.ts` | `applyPerceptionDrift()` — 10% drift toward reality per round | `src/game/perception.ts` |
 | `scoring.ts` | `computeSpearmanScores()` — final ideology-vs-reality ranking | `src/game/scoring.ts` |
 | `polls.ts` | `executePoll()` — spend coins, reveal single-attribute data for all parties; `roundToHalf()` — exported helper rounding to nearest 0.5, applied in display components to limit poll result precision | `src/game/polls.ts` |
-| `campaigns.ts` | `executeCampaign()` — spend coins, boost perceived ideology | `src/game/campaigns.ts` |
+| `campaigns.ts` | `executeCampaign()` — spend coins, boost perceived ideology by 0.5; returns `CampaignResult` on success or `null` on failure; records to `player.campaignResults` | `src/game/campaigns.ts` |
 | `ai.ts` | `executeAllAITurns()` — random poll/campaign actions | `src/game/ai.ts` |
 
 ---
@@ -82,11 +83,12 @@ page.tsx (Home)
 └── GameProvider (store.tsx)
     ├── SetupScreen          — preset picker, game length
     └── GameBoard            — orchestrates all in-game UI
-        ├── AdminPanel       — dev overlay (toggleable, reads full StoreState)
-        ├── Sidebar          — player info, all-party summary, scores
-        ├── PollResultsPanel  — post-phase poll results list (shown until dismissed)
-        ├── PollPanel        — phase: POLLS
-        ├── CampaignPanel    — phase: CAMPAIGNS
+        ├── AdminPanel           — dev overlay (toggleable, reads full StoreState)
+        ├── Sidebar              — player info, all-party summary, scores
+        ├── PollResultsPanel     — post-phase poll results list (shown until dismissed)
+        ├── CampaignResultsPanel — post-phase campaign results list (shown until dismissed)
+        ├── PollPanel            — phase: POLLS
+        ├── CampaignPanel        — phase: CAMPAIGNS (scheduling queue, mirrors PollPanel)
         ├── ElectionResults  — phase: ELECTIONS
         ├── Dashboard        — default/ROUND_END view
         │   └── StateCard×6  — per-state attribute bars, offices, deputies
@@ -114,7 +116,7 @@ The Players section shows each party's ideology as a ranked table (Rank → Attr
 - All interfaces (`GameState`, `PlayerData`, `GameStateData`, `Office`, etc.)
 - All enums (`Phase`, `StateSize`, `OfficeType`, `GameStatus`)
 - All numeric constants (`POLL_COST`, `CAMPAIGN_COST`, `INITIAL_BUDGET`, etc.)
-- Ideology presets (`PRESETS` array with 8 entries)
+- Ideology presets (`IDEOLOGY_PRESETS` — 6 canonical parties: EPL, GEP, GSP, GDP, FRA, NOS; count matches `NUM_PARTIES` so every game uses all 6)
 - Attribute labels (`ATTRIBUTES` array, length 8)
 
 No constants are defined in component or engine files — they import from `types.ts`.

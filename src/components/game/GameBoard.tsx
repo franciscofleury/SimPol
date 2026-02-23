@@ -10,6 +10,7 @@ import { ElectionResults } from './ElectionResults';
 import { Scoreboard } from './Scoreboard';
 import { AdminPanel } from './AdminPanel';
 import { PollResultsPanel } from './PollResultsPanel';
+import { CampaignResultsPanel } from './CampaignResultsPanel';
 
 export function GameBoard() {
   const { game, message } = useGameState();
@@ -49,6 +50,9 @@ export function GameBoard() {
           <>
             {/* Poll results (shown after Poll phase ends, until dismissed) */}
             <PollResultsPanel />
+
+            {/* Campaign results (shown after Campaign phase ends, until dismissed) */}
+            <CampaignResultsPanel />
 
             {/* Phase-specific content */}
             <div className="mb-6">

@@ -144,6 +144,7 @@ export interface PlayerData {
   isReady: boolean;
   // Track poll results the player has purchased (private info)
   pollResults: PollResult[];
+  campaignResults: CampaignResult[];
 }
 
 export interface PollResult {
@@ -153,6 +154,12 @@ export interface PollResult {
   expectation: number;         // single value for the polled attribute
   perceivedQuality: number;    // single value for the polled attribute
   perceivedIdeology: number[]; // all parties' perception for this attr (indexed by partyIndex)
+}
+
+export interface CampaignResult {
+  round: number;
+  stateIndex: number;
+  attributeIndex: number;
 }
 
 export interface ElectionResult {
@@ -193,19 +200,12 @@ export interface PollAction {
   attributeIndex: number;
 }
 
-export interface CampaignAction {
-  type: 'CAMPAIGN';
-  playerIndex: number;
-  stateIndex: number;
-  attributeIndex: number;
-}
-
 export interface ReadyAction {
   type: 'READY';
   playerIndex: number;
 }
 
-export type GameAction = PollAction | CampaignAction | ReadyAction;
+export type GameAction = PollAction | ReadyAction;
 
 // ============================================================
 // Preset Ideologies
@@ -223,52 +223,40 @@ export interface IdeologyPreset {
 // 4=FiscalAusterity, 5=Environment, 6=Infrastructure, 7=Security
 export const IDEOLOGY_PRESETS: IdeologyPreset[] = [
   {
-    name: 'Workers United',
-    description: 'Prioritizes employment and health for the working class',
+    name: 'EPL — Employment & Public Life Party',
+    description: 'Social-development oriented, prioritizes labor markets and public welfare systems.',
     color: '#DC2626', // red
-    ideology: [0, 1, 6, 2, 3, 7, 5, 4], // Employment > Health > Infra > Education > Growth > Security > Environment > Fiscal
+    ideology: [0, 1, 2, 3, 4, 5, 6, 7], // Employment > Health > Education > Growth > Fiscal > Environment > Infrastructure > Security
   },
   {
-    name: 'Green Future',
-    description: 'Environment and education are the path forward',
+    name: 'GEP — Green Education Party',
+    description: 'Knowledge-driven and environmentally focused, advocates long-term public investment.',
     color: '#16A34A', // green
-    ideology: [5, 2, 1, 6, 0, 3, 4, 7], // Environment > Education > Health > Infra > Employment > Growth > Fiscal > Security
+    ideology: [2, 5, 6, 0, 1, 4, 7, 3], // Education > Environment > Infrastructure > Employment > Health > Fiscal > Security > Growth
   },
   {
-    name: 'Free Market Alliance',
-    description: 'Economic growth and fiscal responsibility above all',
+    name: 'GSP — Green Security Party',
+    description: 'Eco-pragmatic with emphasis on public order and health systems.',
+    color: '#0D9488', // teal
+    ideology: [5, 7, 1, 4, 3, 2, 0, 6], // Environment > Security > Health > Fiscal > Growth > Education > Employment > Infrastructure
+  },
+  {
+    name: 'GDP — Growth & Development Party',
+    description: 'Expansionist and productivity-oriented, centered on economic strength.',
     color: '#2563EB', // blue
-    ideology: [3, 4, 0, 6, 7, 2, 1, 5], // Growth > Fiscal > Employment > Infra > Security > Education > Health > Environment
+    ideology: [3, 0, 7, 1, 5, 6, 4, 2], // Growth > Employment > Security > Health > Environment > Infrastructure > Fiscal > Education
   },
   {
-    name: 'National Shield',
-    description: 'Security and infrastructure protect the nation',
-    color: '#7C3AED', // purple
-    ideology: [7, 6, 0, 4, 3, 1, 2, 5], // Security > Infra > Employment > Fiscal > Growth > Health > Education > Environment
+    name: 'FRA — Fiscal Responsibility Alliance',
+    description: 'Economically conservative, prioritizes fiscal balance and efficiency.',
+    color: '#D97706', // amber
+    ideology: [4, 3, 5, 6, 7, 1, 2, 0], // Fiscal > Growth > Environment > Infrastructure > Security > Health > Education > Employment
   },
   {
-    name: 'Social Progress',
-    description: 'Health and education create a just society',
-    color: '#F59E0B', // amber
-    ideology: [1, 2, 5, 0, 6, 3, 7, 4], // Health > Education > Environment > Employment > Infra > Growth > Security > Fiscal
-  },
-  {
-    name: 'Development First',
-    description: 'Infrastructure and growth drive prosperity',
-    color: '#0891B2', // cyan
-    ideology: [6, 3, 0, 4, 1, 7, 2, 5], // Infra > Growth > Employment > Fiscal > Health > Security > Education > Environment
-  },
-  {
-    name: 'Civic Order',
-    description: 'Balanced approach with security and fiscal discipline',
-    color: '#64748B', // slate
-    ideology: [4, 7, 3, 6, 0, 1, 2, 5], // Fiscal > Security > Growth > Infra > Employment > Health > Education > Environment
-  },
-  {
-    name: 'People\'s Coalition',
-    description: 'Employment and education empower the people',
-    color: '#EA580C', // orange
-    ideology: [0, 2, 1, 5, 6, 3, 7, 4], // Employment > Education > Health > Environment > Infra > Growth > Security > Fiscal
+    name: 'NOS — National Order & Security Party',
+    description: 'Stability-oriented, emphasizes security and state authority.',
+    color: '#475569', // slate
+    ideology: [7, 6, 4, 2, 0, 3, 1, 5], // Security > Infrastructure > Fiscal > Education > Employment > Growth > Health > Environment
   },
 ];
 

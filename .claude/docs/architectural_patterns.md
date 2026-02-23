@@ -6,7 +6,11 @@ All game state lives in a single `GameState` object managed by a React Context p
 - `GameContext` — read-only state
 - `GameDispatchContext` — dispatch actions
 
-Source: `src/game/store.tsx:1-135`
+Source: `src/game/store.tsx`
+
+**StoreState fields** (beyond `game: GameState | null` and `message: string`):
+- `scheduledPolls` / `scheduledCampaigns` — queues for the human player's pending actions (coins not yet spent)
+- `resultsLog: ResultLogEntry[]` — cumulative log of all executed polls and campaigns; persists across rounds; entries have `id`, `kind: 'poll' | 'campaign'`, and `data` (`PollResult` | `CampaignResult`). Exported type from `store.tsx`.
 
 **Consuming state in components:**
 ```
@@ -20,10 +24,10 @@ Both hooks throw if used outside `<GameProvider>`. All components use hooks — 
 - `NEW_GAME` — initialize with preset + maxRounds
 - `START_GAME` — run year-0 elections, set status to `IN_PROGRESS`
 - `SCHEDULE_POLL` / `CANCEL_POLL` — queue/dequeue a poll for the human player (no coins spent yet)
-- `DISMISS_POLL_RESULTS` — clear the post-phase poll results panel
 - `SCHEDULE_CAMPAIGN` / `CANCEL_CAMPAIGN` — queue/dequeue a campaign for the human player (no coins spent yet)
-- `DISMISS_CAMPAIGN_RESULTS` — clear the post-phase campaign results panel
-- `END_PHASE` — execute scheduled polls and campaigns (deducting coins), mark human ready, run AI turns, call `advancePhase()`
+- `END_PHASE` — execute scheduled polls and campaigns (deducting coins), append `ResultLogEntry` items to `resultsLog`, mark human ready, run AI turns, call `advancePhase()`
+- `DELETE_RESULT_LOG_ENTRY` — remove a single entry from `resultsLog` by id
+- `CLEAR_RESULTS_LOG` — empty the entire results log
 - `SET_MESSAGE` — update status bar text
 
 ---
@@ -83,19 +87,19 @@ page.tsx (Home)
 └── GameProvider (store.tsx)
     ├── SetupScreen          — preset picker, game length
     └── GameBoard            — orchestrates all in-game UI
-        ├── AdminPanel           — dev overlay (toggleable, reads full StoreState)
-        ├── Sidebar              — player info, all-party summary, scores
-        ├── PollResultsPanel     — post-phase poll results list (shown until dismissed)
-        ├── CampaignResultsPanel — post-phase campaign results list (shown until dismissed)
-        ├── PollPanel            — phase: POLLS
-        ├── CampaignPanel        — phase: CAMPAIGNS (scheduling queue, mirrors PollPanel)
-        ├── ElectionResults  — phase: ELECTIONS
-        ├── Dashboard        — default/ROUND_END view
-        │   └── StateCard×6  — per-state attribute bars, offices, deputies
-        └── Scoreboard       — status: FINISHED
+        ├── AdminPanel        — dev overlay (toggleable, reads full StoreState)
+        ├── Sidebar           — player info, all-party summary, scores
+        ├── PollPanel         — phase: POLLS (scheduling queue)
+        ├── CampaignPanel     — phase: CAMPAIGNS (scheduling queue, mirrors PollPanel)
+        ├── ElectionResults   — phase: ELECTIONS
+        ├── Dashboard         — default/ROUND_END view
+        │   └── StateCard×6   — per-state attribute bars, offices, deputies
+        ├── Scoreboard        — status: FINISHED
+        └── ResultsLogPanel   — permanent right column; cumulative log of all poll and
+                                campaign results; newest-first; per-entry × delete + Clear all
 ```
 
-`GameBoard` (`src/components/game/GameBoard.tsx`) renders the correct panel by switching on `state.currentPhase`. All panels call `dispatch(END_PHASE)` when the human finishes their actions.
+`GameBoard` (`src/components/game/GameBoard.tsx`) renders the correct panel by switching on `state.currentPhase`. All panels call `dispatch(END_PHASE)` when the human finishes their actions. `ResultsLogPanel` is always mounted alongside the main content as a sticky right column.
 
 ---
 

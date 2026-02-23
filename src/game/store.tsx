@@ -15,6 +15,14 @@ import { executeCampaign } from './campaigns';
 import { playerReady, executeAllAITurns, startGame } from './engine';
 
 // ============================================================
+// Results log entry (unified poll + campaign)
+// ============================================================
+
+export type ResultLogEntry =
+  | { id: string; kind: 'poll'; data: PollResult }
+  | { id: string; kind: 'campaign'; data: CampaignResult };
+
+// ============================================================
 // Actions for the reducer
 // ============================================================
 
@@ -23,10 +31,10 @@ type StoreAction =
   | { type: 'START_GAME' }
   | { type: 'SCHEDULE_POLL'; stateIndex: number; attributeIndex: number }
   | { type: 'CANCEL_POLL'; stateIndex: number; attributeIndex: number }
-  | { type: 'DISMISS_POLL_RESULTS' }
   | { type: 'SCHEDULE_CAMPAIGN'; stateIndex: number; attributeIndex: number }
   | { type: 'CANCEL_CAMPAIGN'; stateIndex: number; attributeIndex: number }
-  | { type: 'DISMISS_CAMPAIGN_RESULTS' }
+  | { type: 'DELETE_RESULT_LOG_ENTRY'; id: string }
+  | { type: 'CLEAR_RESULTS_LOG' }
   | { type: 'END_PHASE' }
   | { type: 'SET_MESSAGE'; message: string };
 
@@ -34,9 +42,8 @@ interface StoreState {
   game: GameState | null;
   message: string;
   scheduledPolls: Array<{ stateIndex: number; attributeIndex: number }>;
-  lastPollResults: PollResult[];
   scheduledCampaigns: Array<{ stateIndex: number; attributeIndex: number }>;
-  lastCampaignResults: CampaignResult[];
+  resultsLog: ResultLogEntry[];
 }
 
 const HUMAN_PLAYER_INDEX = 0;
@@ -96,10 +103,6 @@ function gameReducer(state: StoreState, action: StoreAction): StoreState {
       };
     }
 
-    case 'DISMISS_POLL_RESULTS': {
-      return { ...state, lastPollResults: [] };
-    }
-
     case 'SCHEDULE_CAMPAIGN': {
       if (!state.game) return state;
       const { stateIndex, attributeIndex } = action;
@@ -141,15 +144,22 @@ function gameReducer(state: StoreState, action: StoreAction): StoreState {
       };
     }
 
-    case 'DISMISS_CAMPAIGN_RESULTS': {
-      return { ...state, lastCampaignResults: [] };
+    case 'DELETE_RESULT_LOG_ENTRY': {
+      return {
+        ...state,
+        resultsLog: state.resultsLog.filter((e) => e.id !== action.id),
+      };
+    }
+
+    case 'CLEAR_RESULTS_LOG': {
+      return { ...state, resultsLog: [] };
     }
 
     case 'END_PHASE': {
       if (!state.game) return state;
       const game = structuredClone(state.game);
 
-      let lastPollResults = state.lastPollResults;
+      let resultsLog = state.resultsLog;
       let scheduledPolls = state.scheduledPolls;
 
       if (game.currentPhase === 'POLLS' && scheduledPolls.length > 0) {
@@ -158,11 +168,15 @@ function gameReducer(state: StoreState, action: StoreAction): StoreState {
           const result = executePoll(game, HUMAN_PLAYER_INDEX, p.stateIndex, p.attributeIndex);
           if (result) results.push(result);
         }
-        lastPollResults = results;
+        const newEntries: ResultLogEntry[] = results.map((r) => ({
+          id: `poll-r${r.round}-s${r.stateIndex}-a${r.attributeIndex}`,
+          kind: 'poll',
+          data: r,
+        }));
+        resultsLog = [...resultsLog, ...newEntries];
         scheduledPolls = [];
       }
 
-      let lastCampaignResults = state.lastCampaignResults;
       let scheduledCampaigns = state.scheduledCampaigns;
 
       if (game.currentPhase === 'CAMPAIGNS' && scheduledCampaigns.length > 0) {
@@ -171,14 +185,19 @@ function gameReducer(state: StoreState, action: StoreAction): StoreState {
           const result = executeCampaign(game, HUMAN_PLAYER_INDEX, c.stateIndex, c.attributeIndex);
           if (result) results.push(result);
         }
-        lastCampaignResults = results;
+        const newEntries: ResultLogEntry[] = results.map((r) => ({
+          id: `campaign-r${r.round}-s${r.stateIndex}-a${r.attributeIndex}`,
+          kind: 'campaign',
+          data: r,
+        }));
+        resultsLog = [...resultsLog, ...newEntries];
         scheduledCampaigns = [];
       }
 
       executeAllAITurns(game);
       const msg = playerReady(game, HUMAN_PLAYER_INDEX);
 
-      return { ...state, game, message: msg, lastPollResults, scheduledPolls, lastCampaignResults, scheduledCampaigns };
+      return { ...state, game, message: msg, resultsLog, scheduledPolls, scheduledCampaigns };
     }
 
     case 'SET_MESSAGE': {
@@ -198,9 +217,8 @@ const initialState: StoreState = {
   game: null,
   message: '',
   scheduledPolls: [],
-  lastPollResults: [],
   scheduledCampaigns: [],
-  lastCampaignResults: [],
+  resultsLog: [],
 };
 
 const GameContext = createContext<StoreState>(initialState);

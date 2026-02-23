@@ -9,8 +9,7 @@ import { CampaignPanel } from './CampaignPanel';
 import { ElectionResults } from './ElectionResults';
 import { Scoreboard } from './Scoreboard';
 import { AdminPanel } from './AdminPanel';
-import { PollResultsPanel } from './PollResultsPanel';
-import { CampaignResultsPanel } from './CampaignResultsPanel';
+import { ResultsLogPanel } from './ResultsLogPanel';
 
 export function GameBoard() {
   const { game, message } = useGameState();
@@ -48,12 +47,6 @@ export function GameBoard() {
           </div>
         ) : (
           <>
-            {/* Poll results (shown after Poll phase ends, until dismissed) */}
-            <PollResultsPanel />
-
-            {/* Campaign results (shown after Campaign phase ends, until dismissed) */}
-            <CampaignResultsPanel />
-
             {/* Phase-specific content */}
             <div className="mb-6">
               <PhaseContent />
@@ -74,6 +67,9 @@ export function GameBoard() {
           </>
         )}
       </div>
+
+      {/* Results log — independent scrollable right column */}
+      {!isFinished && <ResultsLogPanel />}
     </div>
   );
 }

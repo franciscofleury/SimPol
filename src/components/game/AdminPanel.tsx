@@ -9,7 +9,7 @@ interface AdminPanelProps {
 
 export function AdminPanel({ onClose }: AdminPanelProps) {
   const state = useGameState();
-  const { game, message, lastPollResults, scheduledPolls } = state;
+  const { game, message, resultsLog, scheduledPolls, scheduledCampaigns } = state;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-start justify-center overflow-y-auto">
@@ -40,7 +40,8 @@ export function AdminPanel({ onClose }: AdminPanelProps) {
                   ['firstDeputyElectionDone', String(game?.firstDeputyElectionDone ?? 'null')],
                   ['message', message || '(empty)'],
                   ['scheduledPolls', scheduledPolls.length > 0 ? JSON.stringify(scheduledPolls) : '[]'],
-                  ['lastPollResults', lastPollResults.length > 0 ? `${lastPollResults.length} result(s)` : '[]'],
+                  ['scheduledCampaigns', scheduledCampaigns.length > 0 ? JSON.stringify(scheduledCampaigns) : '[]'],
+                  ['resultsLog', resultsLog.length > 0 ? `${resultsLog.length} entries` : '[]'],
                 ].map(([key, value]) => (
                   <tr key={key} className="border-b border-gray-800">
                     <td className="py-1 pr-4 text-gray-400 font-mono w-48 align-top">{key}</td>

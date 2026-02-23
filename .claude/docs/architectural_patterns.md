@@ -34,7 +34,7 @@ All game logic lives in `src/game/` as plain TypeScript modules with no React im
 | Module | Responsibility | Source |
 |---|---|---|
 | `types.ts` | All types, enums, constants, ideology presets | `src/game/types.ts` |
-| `setup.ts` | `createGame()` — full initial `GameState` | `src/game/setup.ts` |
+| `setup.ts` | `createGame()` — full initial `GameState`; `initializePerceivedIdeology()` applies ±1.5 random perturbation (clamped ≥ 0) to each star value so voters start with imperfect party perception | `src/game/setup.ts` |
 | `engine.ts` | `advancePhase()`, `playerReady()`, `startGame()` | `src/game/engine.ts` |
 | `voters.ts` | `calculateVoteShares()` — GAP-weighted ideology scoring | `src/game/voters.ts` |
 | `elections.ts` | D'Hondt, plurality, multi-winner election runners | `src/game/elections.ts` |
@@ -103,6 +103,8 @@ page.tsx (Home)
 "Admin" button in the `GameBoard` header. It reads the full `StoreState` via `useGameState()`
 and renders four collapsible sections: Game Info, Players, States, and Rounds History.
 Visibility is controlled by a local `useState` boolean in `GameBoard` — no store changes needed.
+
+The Players section shows each party's ideology as a ranked table (Rank → Attribute → **Stars** → Index), where Stars is the real star value for that rank position (4.0 for rank 1 down to 0.5 for rank 8), sourced from `RANK_TO_STARS`. The States section shows `perceivedIdeology` as a numeric grid — comparing Stars in the player table against perceivedIdeology values in the state grid reveals the initial perception gap.
 
 ---
 

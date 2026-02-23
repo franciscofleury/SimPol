@@ -157,7 +157,9 @@ function initializePerceivedIdeology(
   for (const state of states) {
     for (const player of players) {
       const starValues = ideologyToStarValues(player.ideology as number[]);
-      state.perceivedIdeology[player.partyIndex] = starValues;
+      state.perceivedIdeology[player.partyIndex] = starValues.map((v) =>
+        Math.max(0, v + (Math.random() * 3.0 - 1.5))
+      );
     }
   }
 }

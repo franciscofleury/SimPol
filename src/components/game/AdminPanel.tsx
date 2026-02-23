@@ -1,7 +1,7 @@
 'use client';
 
 import { useGameState } from '@/game/store';
-import { ATTRIBUTES, ATTRIBUTE_LABELS, NUM_PARTIES } from '@/game/types';
+import { ATTRIBUTES, ATTRIBUTE_LABELS, NUM_PARTIES, RANK_TO_STARS } from '@/game/types';
 
 interface AdminPanelProps {
   onClose: () => void;
@@ -97,6 +97,7 @@ export function AdminPanel({ onClose }: AdminPanelProps) {
                             <tr className="border-b border-gray-700">
                               <th className="text-left py-0.5 pr-3 text-gray-500 font-mono w-12">Rank</th>
                               <th className="text-left py-0.5 text-gray-500 font-mono">Attribute</th>
+                              <th className="text-left py-0.5 pr-3 text-gray-500 font-mono">Stars</th>
                               <th className="text-left py-0.5 text-gray-500 font-mono">Index</th>
                             </tr>
                           </thead>
@@ -107,6 +108,7 @@ export function AdminPanel({ onClose }: AdminPanelProps) {
                                 <td className="py-0.5 text-gray-100 font-mono">
                                   {ATTRIBUTE_LABELS[ATTRIBUTES[attrIdx]]}
                                 </td>
+                                <td className="py-0.5 pr-3 text-yellow-400 font-mono">{RANK_TO_STARS[rank + 1]}</td>
                                 <td className="py-0.5 text-gray-500 font-mono">{attrIdx}</td>
                               </tr>
                             ))}

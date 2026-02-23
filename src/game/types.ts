@@ -260,6 +260,3 @@ export const IDEOLOGY_PRESETS: IdeologyPreset[] = [
   },
 ];
 
-export const PARTY_COLORS = [
-  '#DC2626', '#2563EB', '#16A34A', '#F59E0B', '#7C3AED', '#0891B2',
-];

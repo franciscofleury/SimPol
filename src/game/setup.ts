@@ -12,7 +12,6 @@ import {
   NUM_PARTIES,
   INITIAL_BUDGET,
   RANK_TO_STARS,
-  PARTY_COLORS,
 } from './types';
 
 /**
@@ -133,7 +132,7 @@ function createPlayers(
     players.push({
       partyIndex: i,
       name: preset.name,
-      color: PARTY_COLORS[i],
+      color: preset.color,
       isAI: !isHuman,
       isHuman,
       coins: INITIAL_BUDGET,

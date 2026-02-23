@@ -176,3 +176,47 @@ The electoral calendar (`src/game/calendar.ts`) maps each year to which office t
 | 12 | Deputies + Senators |
 
 Term lengths: Governors 4 years, Senators 6 years, Deputies 4 years. Governors are pre-assigned at game creation (mid-term: `electedYear: -2`, `expiresYear: 2`) so the first governor election falls at year 2. Senators and deputies start vacant and are first elected at year 0.
+
+---
+
+## Testing
+
+Unit tests cover all pure TypeScript game-logic modules in `src/game/`. Tests use **Vitest** (native TypeScript support, Node environment, no browser needed). Config: `vitest.config.ts` in project root.
+
+**Run tests:**
+```bash
+npm run test:run       # single run
+npm run test           # watch mode
+npm run test:coverage  # V8 coverage report
+```
+
+**Test file locations:** `src/game/__tests__/*.test.ts`
+
+**Coverage scope:**
+
+| Module | Test file | What's tested |
+|---|---|---|
+| `calendar.ts` | `calendar.test.ts` | All election years, non-election years, term-end helpers |
+| `voters.ts` | `voters.test.ts` | Gap computation, GAP-weighted vote shares, floor, equal-weight fallback |
+| `elections.ts` | `elections.test.ts` | D'Hondt seat allocation, plurality winner, full election runs (year 0, 2, 6, non-election) |
+| `economy.ts` | `economy.test.ts` | canAfford, spendCoins, tier-based income distribution |
+| `perception.ts` | `perception.test.ts` | perceivedQuality drift (deterministic, exact assertions), expectation noise (range assertions) |
+| `scoring.ts` | `scoring.test.ts` | Reality ranking sort, Spearman correlation (incl. known ±1 cases), computeScores |
+| `polls.ts` | `polls.test.ts` | roundToHalf, executePoll (validation, coin deduction, PollResult data), isGovernorOf |
+| `campaigns.ts` | `campaigns.test.ts` | executeCampaign (validation, coin deduction, ideology boost) |
+| `setup.ts` | `setup.test.ts` | createGame structural invariants, governor knowledge seeding into player.knownInfo |
+| `engine.ts` | `engine.test.ts` | allPlayersReady, startGame, phase transitions (POLLS→CAMPAIGNS, CAMPAIGNS→next round), game-end |
+
+**Excluded from tests:**
+- `store.tsx` — React Context + useReducer; requires React test environment
+- `ai.ts` — purely random decisions with no deterministic contract to assert
+- `types.ts` — constants and type definitions only
+
+**AI is mocked in `engine.test.ts`** via `vi.mock('../ai', () => ({ executeAITurn: vi.fn() }))` to prevent random AI behavior from polluting phase-transition assertions.
+
+**Shared fixtures:** `src/game/__tests__/fixtures.ts` provides `createMinimalGameState()`, `makeState()`, `makePlayer()`, and `makeAttr()` — deterministic factory helpers used across all test files. Each test creates a fresh game state per `it()` block (no shared mutable state between tests).
+
+**Knowledge assignment coverage:**
+- **Governor seeding** (`createGame` in `setup.ts`) — verified that `player.knownInfo` is pre-populated with all 8 attributes for each governed state, with values matching `state.attributes[a].expectation`, `state.attributes[a].perceivedQuality`, and `state.perceivedIdeology[p][a]` for every party; AI players start with empty `knownInfo`
+- **Poll data completeness** (`executePoll` in `polls.ts`) — verified that `PollResult.perceivedIdeology` captures all `NUM_PARTIES` entries, each matching the actual `state.perceivedIdeology[p][attributeIndex]`
+- The downstream `upsertKnownAttr` writes (poll snapshots + governor live refresh) live in `store.tsx` and are outside the pure-logic test scope

@@ -118,13 +118,15 @@ The Players section shows each party's ideology as a ranked table (Rank → Attr
 
 ## Information Access
 
-State attributes (Expectation, Perceived Quality, Perceived Ideology) are hidden behind `?` placeholders until revealed. Two mechanisms unlock them:
+State attributes (Expectation, Perceived Quality, Perceived Ideology) are hidden behind `?` placeholders until revealed. Knowledge is persisted in `game.players[0].knownInfo: KnownAttrInfo[]` — an array of per-attribute snapshots keyed by `(stateIndex, attributeIndex)`.
 
-1. **Polling** — the human player spends coins to poll an attribute in a state (`SCHEDULE_POLL` → `END_PHASE`). The resulting `PollResult` is stored in `game.players[0].pollResults` and permanently reveals that attribute for that state.
+Two mechanisms write into `knownInfo`, both handled in the `END_PHASE` reducer case in `store.tsx`:
 
-2. **Governor privilege** — if the human party holds the governorship of a state, all attributes for that state are automatically revealed at no cost. This is computed in `Dashboard.tsx` after the poll-results loop: for each state where `state.offices.find(o => o.type === 'GOVERNOR')?.partyIndex === humanPartyIndex`, all 8 attribute indices are added to `polledAttributesByState`. The `StateCard` component needs no changes — the existing `polledAttributes.has(i)` check already handles full reveal when all indices are present.
+1. **Polling (snapshot)** — when the player executes a poll, the `PollResult` snapshot values (`expectation`, `perceivedQuality`, `perceivedIdeology`) are upserted into `knownInfo`. The value is frozen at poll time; if the underlying game state drifts in future rounds, the displayed value remains stale until re-polled.
 
-Governor privilege is re-evaluated every render, so gaining or losing a governorship takes effect immediately in the next round's dashboard view.
+2. **Governor privilege (live refresh)** — after each `playerReady()` / `advancePhase()` call completes (including perception drift), all 8 attributes for every state governed by the human party are upserted into `knownInfo` with current live values. Governor info always overwrites poll snapshots for the same attribute. `knownInfo` starts empty at game creation — the first governor refresh happens when the player ends the first phase.
+
+**Dashboard.tsx** reads `knownInfo` and builds `Map<stateIndex, Map<attributeIndex, KnownAttrInfo>>`, passed to each `StateCard` as `knownAttributes`. **StateCard** reads display values from `knownAttributes.get(i)` (snapshot or live, depending on how it got into `knownInfo`) rather than from live `game.states`.
 
 ---
 

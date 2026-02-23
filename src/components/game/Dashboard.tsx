@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useGameState } from '@/game/store';
-import { NUM_ATTRIBUTES } from '@/game/types';
+import { KnownAttrInfo } from '@/game/types';
 import { StateCard } from './StateCard';
 
 type Tab = 'quality' | 'expectation' | 'perception' | 'ideology';
@@ -20,26 +20,12 @@ export function Dashboard() {
 
   if (!game) return null;
 
-  const polledAttributesByState = new Map<number, Set<number>>();
-  for (const r of game.players[0].pollResults) {
-    if (!polledAttributesByState.has(r.stateIndex)) {
-      polledAttributesByState.set(r.stateIndex, new Set());
+  const knownByState = new Map<number, Map<number, KnownAttrInfo>>();
+  for (const k of game.players[0].knownInfo) {
+    if (!knownByState.has(k.stateIndex)) {
+      knownByState.set(k.stateIndex, new Map());
     }
-    polledAttributesByState.get(r.stateIndex)!.add(r.attributeIndex);
-  }
-
-  // Governor privilege: governing party sees all state info for free
-  const humanPartyIndex = game.players[0].partyIndex;
-  for (const state of game.states) {
-    const governor = state.offices.find((o) => o.type === 'GOVERNOR');
-    if (governor?.partyIndex === humanPartyIndex) {
-      if (!polledAttributesByState.has(state.stateIndex)) {
-        polledAttributesByState.set(state.stateIndex, new Set());
-      }
-      for (let a = 0; a < NUM_ATTRIBUTES; a++) {
-        polledAttributesByState.get(state.stateIndex)!.add(a);
-      }
-    }
+    knownByState.get(k.stateIndex)!.set(k.attributeIndex, k);
   }
 
   return (
@@ -67,7 +53,7 @@ export function Dashboard() {
             state={state}
             players={game.players}
             activeTab={activeTab}
-            polledAttributes={polledAttributesByState.get(state.stateIndex) ?? new Set()}
+            knownAttributes={knownByState.get(state.stateIndex) ?? new Map()}
           />
         ))}
       </div>

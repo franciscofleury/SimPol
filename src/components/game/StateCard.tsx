@@ -1,6 +1,6 @@
 'use client';
 
-import { GameStateData, PlayerData, ATTRIBUTE_LABELS, ATTRIBUTES } from '@/game/types';
+import { GameStateData, PlayerData, KnownAttrInfo, ATTRIBUTE_LABELS, ATTRIBUTES } from '@/game/types';
 import { roundToHalf } from '@/game/polls';
 
 type Tab = 'quality' | 'expectation' | 'perception' | 'ideology';
@@ -9,10 +9,10 @@ interface StateCardProps {
   state: GameStateData;
   players: PlayerData[];
   activeTab: Tab;
-  polledAttributes: Set<number>;  // set of attributeIndex values polled by the human player
+  knownAttributes: Map<number, KnownAttrInfo>;
 }
 
-export function StateCard({ state, players, activeTab, polledAttributes }: StateCardProps) {
+export function StateCard({ state, players, activeTab, knownAttributes }: StateCardProps) {
   const governor = state.offices.find((o) => o.type === 'GOVERNOR');
   const governorParty = governor?.partyIndex !== null && governor?.partyIndex !== undefined
     ? players[governor.partyIndex]
@@ -74,15 +74,18 @@ export function StateCard({ state, players, activeTab, polledAttributes }: State
 
         {(activeTab === 'expectation' || activeTab === 'perception') && (
           <>
-            {state.attributes.map((attr, i) => {
-              const val = roundToHalf(activeTab === 'expectation' ? attr.expectation : attr.perceivedQuality);
+            {state.attributes.map((_, i) => {
+              const known = knownAttributes.get(i);
+              const val = known
+                ? roundToHalf(activeTab === 'expectation' ? known.expectation : known.perceivedQuality)
+                : 0;
               const pct = Math.min(100, (val / 8) * 100);
               return (
                 <div key={i} className="flex items-center gap-2 text-xs">
                   <span className="w-24 text-gray-600 truncate">
                     {ATTRIBUTE_LABELS[ATTRIBUTES[i]]}
                   </span>
-                  {polledAttributes.has(i) ? (
+                  {known ? (
                     <>
                       <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
@@ -128,16 +131,15 @@ export function StateCard({ state, players, activeTab, polledAttributes }: State
                   <td className="py-0.5 pr-2 text-gray-600 truncate">
                     {ATTRIBUTE_LABELS[attr]}
                   </td>
-                  {players.map((p) => (
-                    <td key={p.partyIndex} className="text-center py-0.5 px-1 text-gray-700 font-mono">
-                      {polledAttributes.has(attrIdx)
-                        ? (() => {
-                            const v = state.perceivedIdeology[p.partyIndex]?.[attrIdx];
-                            return v !== undefined ? roundToHalf(v).toFixed(1) : '?';
-                          })()
-                        : '?'}
-                    </td>
-                  ))}
+                  {players.map((p) => {
+                    const known = knownAttributes.get(attrIdx);
+                    const v = known?.perceivedIdeology[p.partyIndex];
+                    return (
+                      <td key={p.partyIndex} className="text-center py-0.5 px-1 text-gray-700 font-mono">
+                        {v !== undefined ? roundToHalf(v).toFixed(1) : '?'}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>

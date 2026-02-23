@@ -145,6 +145,8 @@ export interface PlayerData {
   // Track poll results the player has purchased (private info)
   pollResults: PollResult[];
   campaignResults: CampaignResult[];
+  // Persisted knowledge: snapshot values from polls + live values for governed states
+  knownInfo: KnownAttrInfo[];
 }
 
 export interface PollResult {
@@ -154,6 +156,14 @@ export interface PollResult {
   expectation: number;         // single value for the polled attribute
   perceivedQuality: number;    // single value for the polled attribute
   perceivedIdeology: number[]; // all parties' perception for this attr (indexed by partyIndex)
+}
+
+export interface KnownAttrInfo {
+  stateIndex: number;
+  attributeIndex: number;
+  expectation: number;
+  perceivedQuality: number;
+  perceivedIdeology: number[]; // indexed by partyIndex, value for this attribute
 }
 
 export interface CampaignResult {

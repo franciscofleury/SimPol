@@ -140,6 +140,7 @@ function createPlayers(
       isReady: false,
       pollResults: [],
       campaignResults: [],
+      knownInfo: [],
     });
   }
 
@@ -194,6 +195,23 @@ export function createGame(
 
   initializePerceivedIdeology(states, players);
   initializeGovernors(states);
+
+  // Seed governor knowledge for human player (index 0) at game start
+  const humanPlayer = players[0];
+  for (const state of states) {
+    const governor = state.offices.find((o) => o.type === 'GOVERNOR');
+    if (governor?.partyIndex === humanPlayer.partyIndex) {
+      for (let a = 0; a < NUM_ATTRIBUTES; a++) {
+        humanPlayer.knownInfo.push({
+          stateIndex: state.stateIndex,
+          attributeIndex: a,
+          expectation: state.attributes[a].expectation,
+          perceivedQuality: state.attributes[a].perceivedQuality,
+          perceivedIdeology: state.perceivedIdeology.map((row) => row[a]),
+        });
+      }
+    }
+  }
 
   return {
     status: 'IN_PROGRESS',

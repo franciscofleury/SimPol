@@ -7,8 +7,10 @@ import {
   PollResult,
   CampaignResult,
   ElectionResult,
+  KnownAttrInfo,
   COST_POLL,
   COST_CAMPAIGN,
+  NUM_ATTRIBUTES,
 } from './types';
 import { createGame } from './setup';
 import { executePoll } from './polls';
@@ -49,6 +51,14 @@ interface StoreState {
 }
 
 const HUMAN_PLAYER_INDEX = 0;
+
+function upsertKnownAttr(knownInfo: KnownAttrInfo[], entry: KnownAttrInfo): void {
+  const idx = knownInfo.findIndex(
+    (k) => k.stateIndex === entry.stateIndex && k.attributeIndex === entry.attributeIndex,
+  );
+  if (idx >= 0) knownInfo[idx] = entry;
+  else knownInfo.push(entry);
+}
 
 function gameReducer(state: StoreState, action: StoreAction): StoreState {
   switch (action.type) {
@@ -177,6 +187,17 @@ function gameReducer(state: StoreState, action: StoreAction): StoreState {
         }));
         resultsLog = [...resultsLog, ...newEntries];
         scheduledPolls = [];
+
+        // Persist poll snapshots into knownInfo
+        for (const result of results) {
+          upsertKnownAttr(game.players[HUMAN_PLAYER_INDEX].knownInfo, {
+            stateIndex: result.stateIndex,
+            attributeIndex: result.attributeIndex,
+            expectation: result.expectation,
+            perceivedQuality: result.perceivedQuality,
+            perceivedIdeology: result.perceivedIdeology,
+          });
+        }
       }
 
       let scheduledCampaigns = state.scheduledCampaigns;
@@ -200,6 +221,24 @@ function gameReducer(state: StoreState, action: StoreAction): StoreState {
       const phaseBeforeAdvance = game.currentPhase;
       executeAllAITurns(game);
       const msg = playerReady(game, HUMAN_PLAYER_INDEX);
+
+      // Governor live refresh: after phase advance (drift applied), overwrite knownInfo
+      // for all governed states with current live values
+      const humanPartyIndex = game.players[HUMAN_PLAYER_INDEX].partyIndex;
+      for (const state of game.states) {
+        const governor = state.offices.find((o) => o.type === 'GOVERNOR');
+        if (governor?.partyIndex === humanPartyIndex) {
+          for (let a = 0; a < NUM_ATTRIBUTES; a++) {
+            upsertKnownAttr(game.players[HUMAN_PLAYER_INDEX].knownInfo, {
+              stateIndex: state.stateIndex,
+              attributeIndex: a,
+              expectation: state.attributes[a].expectation,
+              perceivedQuality: state.attributes[a].perceivedQuality,
+              perceivedIdeology: state.perceivedIdeology.map((row) => row[a]),
+            });
+          }
+        }
+      }
 
       // Append election result to log if elections ran during this phase transition
       if (phaseBeforeAdvance === 'CAMPAIGNS') {

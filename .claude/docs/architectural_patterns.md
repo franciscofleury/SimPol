@@ -19,8 +19,10 @@ Both hooks throw if used outside `<GameProvider>`. All components use hooks — 
 **Reducer actions** (all defined in `src/game/store.tsx`):
 - `NEW_GAME` — initialize with preset + maxRounds
 - `START_GAME` — run year-0 elections, set status to `IN_PROGRESS`
-- `POLL` / `CAMPAIGN` — spend coins, mutate state data
-- `END_PHASE` — mark human ready, run AI turns, call `advancePhase()`
+- `SCHEDULE_POLL` / `CANCEL_POLL` — queue/dequeue a poll for the human player (no coins spent yet)
+- `DISMISS_POLL_RESULTS` — clear the post-phase results panel
+- `CAMPAIGN` — spend coins, mutate state data (requires `stateIndex` + `attributeIndex`)
+- `END_PHASE` — execute scheduled polls (deducting coins), mark human ready, run AI turns, call `advancePhase()`
 - `SET_MESSAGE` — update status bar text
 
 ---
@@ -40,7 +42,7 @@ All game logic lives in `src/game/` as plain TypeScript modules with no React im
 | `economy.ts` | `distributeIncome()` — tier-based post-election funding | `src/game/economy.ts` |
 | `perception.ts` | `applyPerceptionDrift()` — 10% drift toward reality per round | `src/game/perception.ts` |
 | `scoring.ts` | `computeSpearmanScores()` — final ideology-vs-reality ranking | `src/game/scoring.ts` |
-| `polls.ts` | `executePoll()` — spend coins, reveal state data | `src/game/polls.ts` |
+| `polls.ts` | `executePoll(game, playerIndex, stateIndex, attributeIndex)` — spend coins, reveal single-attribute data for all parties | `src/game/polls.ts` |
 | `campaigns.ts` | `executeCampaign()` — spend coins, boost perceived ideology | `src/game/campaigns.ts` |
 | `ai.ts` | `executeAllAITurns()` — random poll/campaign actions | `src/game/ai.ts` |
 
@@ -82,6 +84,7 @@ page.tsx (Home)
     └── GameBoard            — orchestrates all in-game UI
         ├── AdminPanel       — dev overlay (toggleable, reads full StoreState)
         ├── Sidebar          — player info, all-party summary, scores
+        ├── PollResultsPanel  — post-phase poll results list (shown until dismissed)
         ├── PollPanel        — phase: POLLS
         ├── CampaignPanel    — phase: CAMPAIGNS
         ├── ElectionResults  — phase: ELECTIONS

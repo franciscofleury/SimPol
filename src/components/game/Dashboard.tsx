@@ -19,7 +19,13 @@ export function Dashboard() {
 
   if (!game) return null;
 
-  const polledStates = new Set(game.players[0].pollResults.map((r) => r.stateIndex));
+  const polledAttributesByState = new Map<number, Set<number>>();
+  for (const r of game.players[0].pollResults) {
+    if (!polledAttributesByState.has(r.stateIndex)) {
+      polledAttributesByState.set(r.stateIndex, new Set());
+    }
+    polledAttributesByState.get(r.stateIndex)!.add(r.attributeIndex);
+  }
 
   return (
     <div>
@@ -46,7 +52,7 @@ export function Dashboard() {
             state={state}
             players={game.players}
             activeTab={activeTab}
-            hasBeenPolled={polledStates.has(state.stateIndex)}
+            polledAttributes={polledAttributesByState.get(state.stateIndex) ?? new Set()}
           />
         ))}
       </div>

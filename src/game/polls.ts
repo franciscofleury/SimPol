@@ -1,19 +1,31 @@
-import { GameState, PollResult, COST_POLL } from './types';
+import { GameState, PollResult, COST_POLL, NUM_ATTRIBUTES } from './types';
 import { canAfford, spendCoins } from './economy';
 
 /**
- * Execute a poll action: reveal expectation, perceived quality, and
- * perceived ideology for a specific state, privately to the requesting player.
+ * Execute a poll action: reveal expectation, perceived quality, and all parties'
+ * perceived ideology for a single attribute in a specific state.
  *
+ * Each (state, attribute) pair can be polled once per round.
  * Returns the poll result or null if the action is invalid.
  */
 export function executePoll(
   game: GameState,
   playerIndex: number,
   stateIndex: number,
+  attributeIndex: number,
 ): PollResult | null {
   if (!canAfford(game, playerIndex, COST_POLL)) return null;
   if (stateIndex < 0 || stateIndex >= game.states.length) return null;
+  if (attributeIndex < 0 || attributeIndex >= NUM_ATTRIBUTES) return null;
+
+  // Block duplicate polls for the same (state, attribute) pair in the same round
+  const alreadyPolled = game.players[playerIndex].pollResults.some(
+    (r) =>
+      r.stateIndex === stateIndex &&
+      r.attributeIndex === attributeIndex &&
+      r.round === game.currentRound,
+  );
+  if (alreadyPolled) return null;
 
   spendCoins(game, playerIndex, COST_POLL);
 
@@ -21,9 +33,10 @@ export function executePoll(
   const result: PollResult = {
     round: game.currentRound,
     stateIndex,
-    expectation: state.attributes.map((a) => a.expectation),
-    perceivedQuality: state.attributes.map((a) => a.perceivedQuality),
-    perceivedIdeology: state.perceivedIdeology[playerIndex].slice(),
+    attributeIndex,
+    expectation: state.attributes[attributeIndex].expectation,
+    perceivedQuality: state.attributes[attributeIndex].perceivedQuality,
+    perceivedIdeology: game.players.map((_, pi) => state.perceivedIdeology[pi][attributeIndex]),
   };
 
   game.players[playerIndex].pollResults.push(result);

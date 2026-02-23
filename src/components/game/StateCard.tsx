@@ -8,10 +8,10 @@ interface StateCardProps {
   state: GameStateData;
   players: PlayerData[];
   activeTab: Tab;
-  hasBeenPolled: boolean;
+  polledAttributes: Set<number>;  // set of attributeIndex values polled by the human player
 }
 
-export function StateCard({ state, players, activeTab, hasBeenPolled }: StateCardProps) {
+export function StateCard({ state, players, activeTab, polledAttributes }: StateCardProps) {
   const governor = state.offices.find((o) => o.type === 'GOVERNOR');
   const governorParty = governor?.partyIndex !== null && governor?.partyIndex !== undefined
     ? players[governor.partyIndex]
@@ -81,7 +81,7 @@ export function StateCard({ state, players, activeTab, hasBeenPolled }: StateCar
                   <span className="w-24 text-gray-600 truncate">
                     {ATTRIBUTE_LABELS[ATTRIBUTES[i]]}
                   </span>
-                  {hasBeenPolled ? (
+                  {polledAttributes.has(i) ? (
                     <>
                       <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
@@ -129,7 +129,7 @@ export function StateCard({ state, players, activeTab, hasBeenPolled }: StateCar
                   </td>
                   {players.map((p) => (
                     <td key={p.partyIndex} className="text-center py-0.5 px-1 text-gray-700 font-mono">
-                      {hasBeenPolled
+                      {polledAttributes.has(attrIdx)
                         ? (state.perceivedIdeology[p.partyIndex]?.[attrIdx]?.toFixed(1) ?? '?')
                         : '?'}
                     </td>

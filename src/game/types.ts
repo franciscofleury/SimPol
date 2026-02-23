@@ -149,9 +149,10 @@ export interface PlayerData {
 export interface PollResult {
   round: number;
   stateIndex: number;
-  expectation: number[];
-  perceivedQuality: number[];
-  perceivedIdeology: number[]; // this party's perceived ideology in that state
+  attributeIndex: number;      // which attribute was polled
+  expectation: number;         // single value for the polled attribute
+  perceivedQuality: number;    // single value for the polled attribute
+  perceivedIdeology: number[]; // all parties' perception for this attr (indexed by partyIndex)
 }
 
 export interface ElectionResult {
@@ -189,6 +190,7 @@ export interface PollAction {
   type: 'POLL';
   playerIndex: number;
   stateIndex: number;
+  attributeIndex: number;
 }
 
 export interface CampaignAction {

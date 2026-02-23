@@ -36,7 +36,8 @@ function aiPolls(game: GameState, playerIndex: number): void {
   for (let i = 0; i < numPolls; i++) {
     if (player.coins < COST_POLL) break;
     const stateIndex = Math.floor(Math.random() * game.states.length);
-    executePoll(game, playerIndex, stateIndex);
+    const attrIndex = Math.floor(Math.random() * NUM_ATTRIBUTES);
+    executePoll(game, playerIndex, stateIndex, attrIndex);
   }
 }
 

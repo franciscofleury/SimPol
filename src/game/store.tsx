@@ -5,6 +5,7 @@ import {
   GameState,
   GameAction,
   PollResult,
+  COST_POLL,
 } from './types';
 import { createGame } from './setup';
 import { executePoll } from './polls';
@@ -18,15 +19,18 @@ import { playerReady, executeAllAITurns, startGame } from './engine';
 type StoreAction =
   | { type: 'NEW_GAME'; presetIndex: number; maxRounds: number }
   | { type: 'START_GAME' }
-  | { type: 'POLL'; stateIndex: number }
+  | { type: 'SCHEDULE_POLL'; stateIndex: number; attributeIndex: number }
+  | { type: 'CANCEL_POLL'; stateIndex: number; attributeIndex: number }
+  | { type: 'DISMISS_POLL_RESULTS' }
   | { type: 'CAMPAIGN'; stateIndex: number; attributeIndex: number }
-  | { type: 'END_PHASE' } // human player marks ready, triggers AI + phase advance
+  | { type: 'END_PHASE' }
   | { type: 'SET_MESSAGE'; message: string };
 
 interface StoreState {
   game: GameState | null;
   message: string;
-  lastPollResult: PollResult | null;
+  scheduledPolls: Array<{ stateIndex: number; attributeIndex: number }>;
+  lastPollResults: PollResult[];
 }
 
 const HUMAN_PLAYER_INDEX = 0;
@@ -45,19 +49,49 @@ function gameReducer(state: StoreState, action: StoreAction): StoreState {
       return { ...state, game, message: msg };
     }
 
-    case 'POLL': {
+    case 'SCHEDULE_POLL': {
       if (!state.game) return state;
-      const game = structuredClone(state.game);
-      const result = executePoll(game, HUMAN_PLAYER_INDEX, action.stateIndex);
-      if (!result) {
-        return { ...state, message: 'Cannot execute poll (insufficient funds or invalid state).' };
+      const { stateIndex, attributeIndex } = action;
+      const humanPlayer = state.game.players[HUMAN_PLAYER_INDEX];
+
+      // Validate affordability: existing queue + this new poll
+      const totalCost = COST_POLL * (state.scheduledPolls.length + 1);
+      if (humanPlayer.coins < totalCost) {
+        return { ...state, message: 'Insufficient funds to schedule this poll.' };
       }
+
+      // Block duplicate in queue
+      const alreadyQueued = state.scheduledPolls.some(
+        (p) => p.stateIndex === stateIndex && p.attributeIndex === attributeIndex,
+      );
+      if (alreadyQueued) return state;
+
+      // Block already polled this round
+      const currentRound = state.game.currentRound;
+      const alreadyPolled = humanPlayer.pollResults.some(
+        (r) => r.stateIndex === stateIndex && r.attributeIndex === attributeIndex && r.round === currentRound,
+      );
+      if (alreadyPolled) return state;
+
       return {
         ...state,
-        game,
-        lastPollResult: result,
-        message: `Poll completed for ${game.states[action.stateIndex].name}.`,
+        scheduledPolls: [...state.scheduledPolls, { stateIndex, attributeIndex }],
+        message: `Poll scheduled for ${state.game.states[stateIndex].name}.`,
       };
+    }
+
+    case 'CANCEL_POLL': {
+      return {
+        ...state,
+        scheduledPolls: state.scheduledPolls.filter(
+          (p) => !(p.stateIndex === action.stateIndex && p.attributeIndex === action.attributeIndex),
+        ),
+        message: 'Scheduled poll cancelled.',
+      };
+    }
+
+    case 'DISMISS_POLL_RESULTS': {
+      return { ...state, lastPollResults: [] };
     }
 
     case 'CAMPAIGN': {
@@ -83,13 +117,23 @@ function gameReducer(state: StoreState, action: StoreAction): StoreState {
       if (!state.game) return state;
       const game = structuredClone(state.game);
 
-      // Execute AI turns first
-      executeAllAITurns(game);
+      let lastPollResults = state.lastPollResults;
+      let scheduledPolls = state.scheduledPolls;
 
-      // Mark human player as ready
+      if (game.currentPhase === 'POLLS' && scheduledPolls.length > 0) {
+        const results: PollResult[] = [];
+        for (const p of scheduledPolls) {
+          const result = executePoll(game, HUMAN_PLAYER_INDEX, p.stateIndex, p.attributeIndex);
+          if (result) results.push(result);
+        }
+        lastPollResults = results;
+        scheduledPolls = [];
+      }
+
+      executeAllAITurns(game);
       const msg = playerReady(game, HUMAN_PLAYER_INDEX);
 
-      return { ...state, game, message: msg, lastPollResult: null };
+      return { ...state, game, message: msg, lastPollResults, scheduledPolls };
     }
 
     case 'SET_MESSAGE': {
@@ -108,7 +152,8 @@ function gameReducer(state: StoreState, action: StoreAction): StoreState {
 const initialState: StoreState = {
   game: null,
   message: '',
-  lastPollResult: null,
+  scheduledPolls: [],
+  lastPollResults: [],
 };
 
 const GameContext = createContext<StoreState>(initialState);

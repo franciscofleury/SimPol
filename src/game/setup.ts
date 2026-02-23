@@ -42,8 +42,8 @@ function createStates(): GameStateData[] {
 
     const attributes: StateAttributeData[] = realQualities.map((rq) => ({
       realQuality: rq,
-      // Initially, perception matches reality
-      perceivedQuality: rq,
+      // Initially, perception is close to reality but with random perturbation of ±1.5
+      perceivedQuality: Math.max(0, rq + (Math.random() * 3.0 - 1.5)),
       // Expectation is slightly above reality (voters always want more)
       expectation: rq + 0.5 + Math.random() * 1.0,
     }));

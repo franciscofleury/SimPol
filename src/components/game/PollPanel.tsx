@@ -7,7 +7,7 @@ import { ATTRIBUTE_LABELS, ATTRIBUTES, COST_POLL } from '@/game/types';
 export function PollPanel() {
   const { game, scheduledPolls } = useGameState();
   const dispatch = useGameDispatch();
-  const [selectedAttrIndex, setSelectedAttrIndex] = useState(0);
+  const [selectedState, setSelectedState] = useState<number | null>(null);
 
   if (!game) return null;
 
@@ -39,51 +39,64 @@ export function PollPanel() {
         Schedule polls to run at the end of the phase. Results reveal voter expectations, perceived quality, and all parties&apos; perceived ideology for the selected attribute.
       </p>
 
-      {/* Attribute selector */}
-      <div className="flex items-center gap-3 mb-4">
-        <label className="text-sm font-medium text-gray-700">Attribute:</label>
-        <select
-          value={selectedAttrIndex}
-          onChange={(e) => setSelectedAttrIndex(Number(e.target.value))}
-          className="border border-gray-300 rounded-md text-sm px-2 py-1.5"
-        >
-          {ATTRIBUTES.map((attr, i) => (
-            <option key={i} value={i}>{ATTRIBUTE_LABELS[attr]}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* State grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-6">
-        {game.states.map((state) => {
-          const key = `${state.stateIndex}-${selectedAttrIndex}`;
-          const isQueued = queuedKeys.has(key);
-          const isPolled = polledThisRound.has(key);
-          const isDisabled = isPolled || isQueued || (!isQueued && !canAffordNext);
-
-          return (
+      {/* Step 1: Select state */}
+      <div className="mb-4">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">1. Select a State</h3>
+        <div className="flex flex-wrap gap-2">
+          {game.states.map((state) => (
             <button
               key={state.stateIndex}
-              onClick={() =>
-                dispatch({ type: 'SCHEDULE_POLL', stateIndex: state.stateIndex, attributeIndex: selectedAttrIndex })
-              }
-              disabled={isDisabled}
-              className={`p-3 rounded-lg border text-left transition-all ${
-                isQueued
-                  ? 'border-blue-400 bg-blue-50 cursor-default'
-                  : isDisabled
-                  ? 'border-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer'
+              onClick={() => setSelectedState(state.stateIndex)}
+              className={`px-3 py-1.5 rounded-lg border text-sm transition-all ${
+                selectedState === state.stateIndex
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <div className="font-medium text-sm">{state.name}</div>
-              <div className="text-xs text-gray-500">
-                {isQueued ? 'Scheduled ✓' : isPolled ? 'Already polled' : `${state.size} · ${state.deputies} dep.`}
-              </div>
+              {state.name}
             </button>
-          );
-        })}
+          ))}
+        </div>
       </div>
+
+      {/* Step 2: Select attribute */}
+      {selectedState !== null && (
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">
+            2. Select an Attribute to Poll in {game.states[selectedState].name}
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {ATTRIBUTES.map((attr, i) => {
+              const key = `${selectedState}-${i}`;
+              const isQueued = queuedKeys.has(key);
+              const isPolled = polledThisRound.has(key);
+              const isDisabled = isQueued || isPolled || (!isQueued && !canAffordNext);
+
+              return (
+                <button
+                  key={i}
+                  onClick={() =>
+                    dispatch({ type: 'SCHEDULE_POLL', stateIndex: selectedState, attributeIndex: i })
+                  }
+                  disabled={isDisabled}
+                  className={`p-3 rounded-lg border text-left transition-all ${
+                    isQueued
+                      ? 'border-blue-400 bg-blue-50 cursor-default'
+                      : isDisabled
+                      ? 'border-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer'
+                  }`}
+                >
+                  <div className="font-medium text-sm">{ATTRIBUTE_LABELS[attr]}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {isQueued ? 'Scheduled ✓' : isPolled ? 'Already polled' : ''}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Scheduled queue */}
       {scheduledPolls.length > 0 && (

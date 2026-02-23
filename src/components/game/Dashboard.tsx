@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useGameState } from '@/game/store';
+import { NUM_ATTRIBUTES } from '@/game/types';
 import { StateCard } from './StateCard';
 
 type Tab = 'quality' | 'expectation' | 'perception' | 'ideology';
@@ -25,6 +26,20 @@ export function Dashboard() {
       polledAttributesByState.set(r.stateIndex, new Set());
     }
     polledAttributesByState.get(r.stateIndex)!.add(r.attributeIndex);
+  }
+
+  // Governor privilege: governing party sees all state info for free
+  const humanPartyIndex = game.players[0].partyIndex;
+  for (const state of game.states) {
+    const governor = state.offices.find((o) => o.type === 'GOVERNOR');
+    if (governor?.partyIndex === humanPartyIndex) {
+      if (!polledAttributesByState.has(state.stateIndex)) {
+        polledAttributesByState.set(state.stateIndex, new Set());
+      }
+      for (let a = 0; a < NUM_ATTRIBUTES; a++) {
+        polledAttributesByState.get(state.stateIndex)!.add(a);
+      }
+    }
   }
 
   return (

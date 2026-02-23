@@ -116,6 +116,18 @@ The Players section shows each party's ideology as a ranked table (Rank → Attr
 
 ---
 
+## Information Access
+
+State attributes (Expectation, Perceived Quality, Perceived Ideology) are hidden behind `?` placeholders until revealed. Two mechanisms unlock them:
+
+1. **Polling** — the human player spends coins to poll an attribute in a state (`SCHEDULE_POLL` → `END_PHASE`). The resulting `PollResult` is stored in `game.players[0].pollResults` and permanently reveals that attribute for that state.
+
+2. **Governor privilege** — if the human party holds the governorship of a state, all attributes for that state are automatically revealed at no cost. This is computed in `Dashboard.tsx` after the poll-results loop: for each state where `state.offices.find(o => o.type === 'GOVERNOR')?.partyIndex === humanPartyIndex`, all 8 attribute indices are added to `polledAttributesByState`. The `StateCard` component needs no changes — the existing `polledAttributes.has(i)` check already handles full reveal when all indices are present.
+
+Governor privilege is re-evaluated every render, so gaining or losing a governorship takes effect immediately in the next round's dashboard view.
+
+---
+
 ## Types as Single Source of Truth
 
 `src/game/types.ts` is the canonical definition file for:

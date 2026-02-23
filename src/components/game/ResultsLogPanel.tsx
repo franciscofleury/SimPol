@@ -6,6 +6,7 @@ import { roundToHalf } from '@/game/polls';
 
 type PollEntry = Extract<ResultLogEntry, { kind: 'poll' }>;
 type CampaignEntry = Extract<ResultLogEntry, { kind: 'campaign' }>;
+type ElectionEntry = Extract<ResultLogEntry, { kind: 'election' }>;
 
 export function ResultsLogPanel() {
   const { game, resultsLog } = useGameState();
@@ -32,7 +33,7 @@ export function ResultsLogPanel() {
 
       {entries.length === 0 ? (
         <p className="text-xs text-gray-400 text-center mt-8 px-4">
-          No results yet. Poll and campaign results will appear here.
+          No results yet. Poll, campaign, and election results will appear here.
         </p>
       ) : (
         <ul className="flex flex-col gap-2 p-3">
@@ -44,8 +45,14 @@ export function ResultsLogPanel() {
                   game={game}
                   onDelete={() => dispatch({ type: 'DELETE_RESULT_LOG_ENTRY', id: entry.id })}
                 />
-              ) : (
+              ) : entry.kind === 'campaign' ? (
                 <CampaignLogEntry
+                  entry={entry}
+                  game={game}
+                  onDelete={() => dispatch({ type: 'DELETE_RESULT_LOG_ENTRY', id: entry.id })}
+                />
+              ) : (
+                <ElectionLogEntry
                   entry={entry}
                   game={game}
                   onDelete={() => dispatch({ type: 'DELETE_RESULT_LOG_ENTRY', id: entry.id })}
@@ -146,5 +153,114 @@ function CampaignLogEntry({
         ×
       </button>
     </div>
+  );
+}
+
+function ElectionLogEntry({
+  entry,
+  game,
+  onDelete,
+}: {
+  entry: ElectionEntry;
+  game: GameState;
+  onDelete: () => void;
+}) {
+  const { data } = entry;
+
+  return (
+    <>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="inline-block font-medium bg-purple-100 text-purple-700 rounded px-1.5 py-0.5">
+            Election · Y{data.year}
+          </span>
+          {data.types.map((t) => (
+            <span key={t} className="text-xs bg-gray-100 text-gray-600 rounded px-1 py-0.5">
+              {t}
+            </span>
+          ))}
+        </div>
+        <button
+          onClick={onDelete}
+          className="text-gray-300 hover:text-red-400 flex-shrink-0 leading-none text-base"
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Deputies: total seats per party */}
+      {data.deputyResults && (
+        <div className="mb-2">
+          <div className="text-gray-500 mb-1">Deputies (total):</div>
+          <div className="flex flex-wrap gap-2">
+            {game.players.map((p) => {
+              const total = Object.values(data.deputyResults!).reduce(
+                (sum, alloc) => sum + (alloc[p.partyIndex] || 0),
+                0,
+              );
+              return (
+                <div key={p.partyIndex} className="flex items-center gap-1">
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: p.color }}
+                  />
+                  <span className="font-mono text-gray-900">{total}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Governors: state → winner */}
+      {data.governorResults && (
+        <div className="mb-2">
+          <div className="text-gray-500 mb-1">Governors:</div>
+          <div className="space-y-0.5">
+            {Object.entries(data.governorResults).map(([stateIdx, partyIdx]) => {
+              const player = game.players[partyIdx];
+              return (
+                <div key={stateIdx} className="flex items-center gap-1.5">
+                  <span className="text-gray-700 truncate">{game.states[Number(stateIdx)].name}:</span>
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: player.color }}
+                  />
+                  <span className="truncate">{player.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Senators: state → two winners */}
+      {data.senatorResults && (
+        <div>
+          <div className="text-gray-500 mb-1">Senators:</div>
+          <div className="space-y-0.5">
+            {Object.entries(data.senatorResults).map(([stateIdx, winners]) => (
+              <div key={stateIdx} className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-gray-700 truncate">{game.states[Number(stateIdx)].name}:</span>
+                {winners.map((partyIdx, i) => {
+                  const player = game.players[partyIdx];
+                  return (
+                    <div key={i} className="flex items-center gap-0.5">
+                      <div
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: player.color }}
+                      />
+                      <span className="truncate">{player.name}</span>
+                      {i < winners.length - 1 && <span className="text-gray-400">,</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

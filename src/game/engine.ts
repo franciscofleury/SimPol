@@ -122,20 +122,14 @@ export function playerReady(game: GameState, playerIndex: number): string {
 }
 
 /**
- * Start a new game: run initial elections (year 0) and set up first round.
+ * Start a new game at year 0. Senators and deputies start vacant and will be
+ * elected at the end of year 0's CAMPAIGNS phase (same as any other election year).
+ * Governors are already mid-term, pre-assigned by createGame().
  */
 export function startGame(game: GameState): string {
-  // Year 0 has deputies and senators elections
-  // Run them immediately at game start
-  const result = runElections(game);
-  if (result) {
-    game.rounds.push({ number: 0, electionResult: result });
-  }
-
-  // Now advance to year 1 for actual gameplay
-  game.currentRound = 1;
+  game.currentRound = 0;
   game.currentPhase = 'POLLS';
   resetReady(game);
 
-  return 'Game started! Year 0 elections complete. Year 1 begins.';
+  return 'Game started! Year 0 begins. Deputies and senators will be elected at the end of this year.';
 }

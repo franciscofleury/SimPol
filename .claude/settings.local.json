@@ -4,7 +4,8 @@
       "Bash(python3:*)",
       "Bash(npx create-next-app:*)",
       "Bash(npm run:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)"
     ]
   }
 }

@@ -10,7 +10,7 @@ Source: `src/game/store.tsx`
 
 **StoreState fields** (beyond `game: GameState | null` and `message: string`):
 - `scheduledPolls` / `scheduledCampaigns` — queues for the human player's pending actions (coins not yet spent)
-- `resultsLog: ResultLogEntry[]` — cumulative log of all executed polls and campaigns; persists across rounds; entries have `id`, `kind: 'poll' | 'campaign'`, and `data` (`PollResult` | `CampaignResult`). Exported type from `store.tsx`.
+- `resultsLog: ResultLogEntry[]` — cumulative log of all executed polls, campaigns, and elections; persists across rounds; entries have `id`, `kind: 'poll' | 'campaign' | 'election'`, and `data` (`PollResult` | `CampaignResult` | `ElectionResult`). Exported type from `store.tsx`.
 
 **Consuming state in components:**
 ```
@@ -22,10 +22,10 @@ Both hooks throw if used outside `<GameProvider>`. All components use hooks — 
 
 **Reducer actions** (all defined in `src/game/store.tsx`):
 - `NEW_GAME` — initialize with preset + maxRounds
-- `START_GAME` — run year-0 elections, set status to `IN_PROGRESS`
+- `START_GAME` — begin year 0 at POLLS phase; senators and deputies start vacant and are filled by year 0's auto-run elections (at end of CAMPAIGNS); governors are pre-assigned mid-term by `createGame()`
 - `SCHEDULE_POLL` / `CANCEL_POLL` — queue/dequeue a poll for the human player (no coins spent yet)
 - `SCHEDULE_CAMPAIGN` / `CANCEL_CAMPAIGN` — queue/dequeue a campaign for the human player (no coins spent yet)
-- `END_PHASE` — execute scheduled polls and campaigns (deducting coins), append `ResultLogEntry` items to `resultsLog`, mark human ready, run AI turns, call `advancePhase()`
+- `END_PHASE` — execute scheduled polls and campaigns (deducting coins), append poll/campaign `ResultLogEntry` items to `resultsLog`, mark human ready, run AI turns, call `advancePhase()`; if elections ran (CAMPAIGNS phase in an election year), appends an `'election'` `ResultLogEntry` after phase advance
 - `DELETE_RESULT_LOG_ENTRY` — remove a single entry from `resultsLog` by id
 - `CLEAR_RESULTS_LOG` — empty the entire results log
 - `SET_MESSAGE` — update status bar text
@@ -78,6 +78,8 @@ POLLS → CAMPAIGNS → PROJECTS (stub) → ELECTIONS → ROUND_END → (next ye
 
 `playerReady()` marks the human done and immediately runs AI turns for the current phase before calling `advancePhase()`. The `PROJECTS` phase is defined in types but skipped by the engine (`src/game/engine.ts`).
 
+**Year 0:** The game begins at year 0, POLLS phase. Senators and deputies start vacant; they are filled by year 0's auto-run elections (triggered at the end of CAMPAIGNS, same as all other election years). Governors are pre-assigned at game creation (mid-term: `electedYear: -2`, `expiresYear: 2`). The `ELECTIONS` and `ROUND_END` phases are internal engine states — they are set and immediately advanced within a single `advancePhase()` call, so React only ever renders POLLS or CAMPAIGNS phases during active gameplay.
+
 ---
 
 ## Component Hierarchy
@@ -95,8 +97,8 @@ page.tsx (Home)
         ├── Dashboard         — default/ROUND_END view
         │   └── StateCard×6   — per-state attribute bars, offices, deputies
         ├── Scoreboard        — status: FINISHED
-        └── ResultsLogPanel   — permanent right column; cumulative log of all poll and
-                                campaign results; newest-first; per-entry × delete + Clear all
+        └── ResultsLogPanel   — permanent right column; cumulative log of all poll, campaign,
+                                and election results; newest-first; per-entry × delete + Clear all
 ```
 
 `GameBoard` (`src/components/game/GameBoard.tsx`) renders the correct panel by switching on `state.currentPhase`. All panels call `dispatch(END_PHASE)` when the human finishes their actions. `ResultsLogPanel` is always mounted alongside the main content as a sticky right column.
@@ -147,4 +149,16 @@ Two systems coexist in `src/game/elections.ts`:
 - **D'Hondt proportional** — used for Deputies; allocates seats by iterative highest-quotient (`votes / (seats + 1)`)
 - **Plurality / Top-N** — used for Governors (top 1) and Senators (top 2) by raw vote share
 
-The electoral calendar (`src/game/calendar.ts`) maps each year to which office types hold elections, based on a 12-year cycle.
+The electoral calendar (`src/game/calendar.ts`) maps each year to which office types hold elections, based on a 12-year cycle:
+
+| Year | Elections |
+|------|-----------|
+| 0 | Deputies + Senators |
+| 2 | Governors |
+| 4 | Deputies |
+| 6 | Governors + Senators |
+| 8 | Deputies |
+| 10 | Governors |
+| 12 | Deputies + Senators |
+
+Term lengths: Governors 4 years, Senators 6 years, Deputies 4 years. Governors are pre-assigned at game creation (mid-term: `electedYear: -2`, `expiresYear: 2`) so the first governor election falls at year 2. Senators and deputies start vacant and are first elected at year 0.

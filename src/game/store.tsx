@@ -6,6 +6,7 @@ import {
   GameAction,
   PollResult,
   CampaignResult,
+  ElectionResult,
   COST_POLL,
   COST_CAMPAIGN,
 } from './types';
@@ -20,7 +21,8 @@ import { playerReady, executeAllAITurns, startGame } from './engine';
 
 export type ResultLogEntry =
   | { id: string; kind: 'poll'; data: PollResult }
-  | { id: string; kind: 'campaign'; data: CampaignResult };
+  | { id: string; kind: 'campaign'; data: CampaignResult }
+  | { id: string; kind: 'election'; data: ElectionResult };
 
 // ============================================================
 // Actions for the reducer
@@ -194,8 +196,23 @@ function gameReducer(state: StoreState, action: StoreAction): StoreState {
         scheduledCampaigns = [];
       }
 
+      const roundBeforeAdvance = game.currentRound;
+      const phaseBeforeAdvance = game.currentPhase;
       executeAllAITurns(game);
       const msg = playerReady(game, HUMAN_PLAYER_INDEX);
+
+      // Append election result to log if elections ran during this phase transition
+      if (phaseBeforeAdvance === 'CAMPAIGNS') {
+        const electionResult = game.rounds.find(
+          (r) => r.number === roundBeforeAdvance,
+        )?.electionResult;
+        if (electionResult) {
+          resultsLog = [
+            ...resultsLog,
+            { id: `election-r${roundBeforeAdvance}`, kind: 'election', data: electionResult },
+          ];
+        }
+      }
 
       return { ...state, game, message: msg, resultsLog, scheduledPolls, scheduledCampaigns };
     }
